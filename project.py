@@ -2,7 +2,7 @@ import collections
 import re
 
 INTEGER, PLUS, MINUS, MUL, LPAREN, RPAREN, EOF, ID ,ASSIGN,END= (
-                                                  'INTEGER', 'PLUS', 'MINUS', 'MUL', '(', ')', 'EOF','ID','ASSIGN','END'
+                                                  'INTEGER', 'PLUS', 'MINUS', 'MUL', 'LPAREN', 'RPAREN', 'EOF','ID','ASSIGN','END'
                                                   )
 
 Token_Tuple = collections.namedtuple('Token', ['typ', 'value', 'line', 'column'])
@@ -17,6 +17,8 @@ def tokenize(s):
         ('PLUS',      r'[+]'),   # Arithmetic operators
         ('MINUS',      r'[-]'),   # Arithmetic operators
         ('MUL',      r'[*]'),   # Arithmetic operators
+        ('LPAREN',      r'[(]'),
+        ('RPAREN',      r'[)]'),
                            #('OP',      r'[+*\/\-]'),    # Arithmetic operators
         ('NEWLINE', r'\n'),          # Line endings
         ('SKIP',    r'[ \t]'),       # Skip over spaces and tabs
@@ -39,15 +41,11 @@ def tokenize(s):
         pos = mo.end()
         mo = get_token(s, pos)
     if pos != len(s):
+        print ('error')
+        raise SystemExit
         raise RuntimeError('Unexpected character %r on line %d' %(s[pos], line))
 
-statements = '''
-    z = x + y;
-'''
 
-for xxx in tokenize(statements):
-    
-    print(xxx)
 class Token(object):
     def __init__(self, type, value):
         self.type = type
@@ -184,7 +182,7 @@ class Parser(object):
             factor : INTEGER | LPAREN expr RPAREN
             """
         node = self.term()
-        print('before while',self.current_token.type)
+        
         while self.current_token.type in (PLUS, MINUS):
             
             token = self.current_token
@@ -242,6 +240,8 @@ class NodeVisitor(object):
         return visitor(node)
     
     def generic_visit(self, node):
+        print ('error')
+        raise SystemExit
         raise Exception('No visit_{} method'.format(type(node).__name__))
 
 
@@ -259,10 +259,10 @@ class Interpreter(NodeVisitor):
 
 
     def visit_Num(self, node):
-        print ('NUM')
+        
         return node.value
     def visit_Id(self, node):
-        print ('ID',node.value)
+        
         return node.value
     def interpret(self):
         tree = self.parser.parse()
@@ -273,18 +273,35 @@ def main():
     
     
     #lines = ['x = 1;','y = 3;','z = 4 + 5;']
-    lines = ['x = 1;','y = 3;','z = x + y;']
+    
+    code = '''
+        x = 1;
+        y = 3;
+        z = (x + y);
+        '''
+    code = '''
+        x = 0
+        y = x;
+        z = ---(x+y);
+        '''
+    code = '''
+        x = 1;
+        y = 2;
+        z = --(x+y)*(x+y);
+        '''
+    
+    lines = code.split('\n')
+    #print(lines)
     #lines = ['z = 4 + 5;']
     for line in lines:
-        lexer = Lexer(line)
-        parser = Parser(lexer)
-        interpreter = Interpreter(parser)
-        result = interpreter.interpret()
-        #print(result)
-        symbol[parser.get_current_id()] = result
-        for xxx in get_all_token(tokenize(line)):
-            
-            print(xxx)
+        if len(line.strip())>0:
+            lexer = Lexer(line)
+            parser = Parser(lexer)
+            interpreter = Interpreter(parser)
+            result = interpreter.interpret()
+            #print(result)
+            symbol[parser.get_current_id()] = result
+
         
     for k,v in symbol.items():
         print (k,v)
