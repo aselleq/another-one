@@ -13,8 +13,11 @@ def tokenize(s):
         ('INTEGER',  r'\d+(\.\d*)?'), # Integer or decimal number
         ('ASSIGN',  r'='),          # Assignment operator
         ('END',     r';'),           # Statement terminator
-        ('ID',      r'[A-Za-z]+'),   # Identifiers
-        ('OP',      r'[+*\/\-]'),    # Arithmetic operators
+        ('ID',      r'[A-Za-z]+'),   # Arithmetic operators
+        ('PLUS',      r'[+]'),   # Arithmetic operators
+        ('MINUS',      r'[-]'),   # Arithmetic operators
+        ('MUL',      r'[*]'),   # Arithmetic operators
+                           #('OP',      r'[+*\/\-]'),    # Arithmetic operators
         ('NEWLINE', r'\n'),          # Line endings
         ('SKIP',    r'[ \t]'),       # Skip over spaces and tabs
     ]
@@ -39,14 +42,12 @@ def tokenize(s):
         raise RuntimeError('Unexpected character %r on line %d' %(s[pos], line))
 
 statements = '''
-    IF quantity THEN
-        total := total + price * quantity;
-        tax := price * 0.05;
-    ENDIF;
+    z = x + y;
 '''
-statements = '''
-    x = 3;
-    '''
+
+for xxx in tokenize(statements):
+    
+    print(xxx)
 class Token(object):
     def __init__(self, type, value):
         self.type = type
@@ -72,6 +73,7 @@ def get_all_token(tuples):
     for tk in tuples:
         token = Token(tk[0],tk[1])
         tokens.append(token)
+ 
     return tokens
 
 class Lexer:
@@ -102,7 +104,7 @@ class BinOp(AST):
 class Num(AST):
     def __init__(self, token):
         self.token = token
-        self.value = token.value
+        self.value = int(token.value)
 
 class Id(AST):
     def __init__(self, token):
@@ -110,7 +112,7 @@ class Id(AST):
         if token.value in symbol:
             self.value = symbol[token.value]
         else:
-            self.value = '0'
+            self.value = 0
 
 class Parser(object):
     def __init__(self, lexer):
@@ -182,8 +184,9 @@ class Parser(object):
             factor : INTEGER | LPAREN expr RPAREN
             """
         node = self.term()
-        
+        print('before while',self.current_token.type)
         while self.current_token.type in (PLUS, MINUS):
+            
             token = self.current_token
             if token.type == PLUS:
                 self.eat(PLUS)
@@ -198,6 +201,7 @@ class Parser(object):
         token = self.current_token
         if token.type == ID:
             self.current_id = token.value
+            
             self.eat(ID)
             token = self.current_token
             if token.type == ASSIGN:
@@ -220,6 +224,7 @@ class Parser(object):
     
 
     def parse(self):
+        #return self.expr()
         return self.prog()
 
 
@@ -233,6 +238,7 @@ class NodeVisitor(object):
     def visit(self, node):
         method_name = 'visit_' + type(node).__name__
         visitor = getattr(self, method_name, self.generic_visit)
+        
         return visitor(node)
     
     def generic_visit(self, node):
@@ -253,11 +259,11 @@ class Interpreter(NodeVisitor):
 
 
     def visit_Num(self, node):
-        print (node)
+        print ('NUM')
         return node.value
     def visit_Id(self, node):
-        print (node)
-        return symbol[node.value]
+        print ('ID',node.value)
+        return node.value
     def interpret(self):
         tree = self.parser.parse()
         return self.visit(tree)
@@ -266,7 +272,9 @@ class Interpreter(NodeVisitor):
 def main():
     
     
-    lines = ['x = 1;','y = 3;']
+    #lines = ['x = 1;','y = 3;','z = 4 + 5;']
+    lines = ['x = 1;','y = 3;','z = x + y;']
+    #lines = ['z = 4 + 5;']
     for line in lines:
         lexer = Lexer(line)
         parser = Parser(lexer)
